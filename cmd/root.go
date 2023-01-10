@@ -10,7 +10,6 @@ import (
 
 var rootOpts struct {
 	socket string
-	debug  bool
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -27,6 +26,10 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		cmd.SilenceUsage = true
+		return nil
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -46,5 +49,4 @@ func init() {
 	cobra.CheckErr(err)
 	defaultSocketPath := filepath.Join(homedir, ".declarative-port-forwarder.sock")
 	fs.StringVar(&rootOpts.socket, "socket", defaultSocketPath, "")
-	fs.BoolVar(&rootOpts.debug, "debug", false, "Enable debug logging")
 }

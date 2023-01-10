@@ -24,7 +24,6 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		c := pkg.NewClient(rootOpts.socket)
 
 		err := c.Ready()
@@ -45,7 +44,7 @@ to quickly create a Cobra application.`,
 		if len(rootOpts.socket) != 0 {
 			opts = append(opts, "--socket", rootOpts.socket)
 		}
-		if rootOpts.debug {
+		if serveOpts.debug {
 			opts = append(opts, "--debug")
 		}
 		if len(serveOpts.kubeconfig) != 0 {
