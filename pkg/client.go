@@ -27,17 +27,19 @@ func NewClient(socketAddr string) *Client {
 	}
 }
 
+var ErrNotReady = errors.New("not ready")
+
 func (c *Client) Ready() error {
 	res, err := c.client.Get("http://localhost" + "/ready")
 	if err != nil {
-		return err
+		return ErrNotReady
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusOK {
 		return nil
 	}
-	return errors.New("not ready")
+	return ErrNotReady
 }
 
 func (c *Client) Get(path string) {

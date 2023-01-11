@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ var serveOpts struct {
 	config     string
 	kubeconfig string
 	logdir     string
+	debug      bool
 }
 
 // serveCmd represents the serve command
@@ -34,14 +36,15 @@ to quickly create a Cobra application.`,
 		//TODO: create log dir if not exist
 
 		var cfg zap.Config
-		if rootOpts.debug {
+		if serveOpts.debug {
 			cfg = zap.NewDevelopmentConfig()
 		} else {
 			cfg = zap.NewProductionConfig()
 		}
 		pid := os.Getpid()
+		logFilePath := filepath.Join(serveOpts.logdir, fmt.Sprintf("server-%d.log", pid))
 		cfg.OutputPaths = []string{
-			filepath.Join(serveOpts.logdir, fmt.Sprintf("server-%d.log", pid)),
+			logFilePath,
 		}
 		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 		logger, err := cfg.Build()
@@ -49,10 +52,14 @@ to quickly create a Cobra application.`,
 			return err
 		}
 		zap.ReplaceGlobals(logger)
+
+		ctx := context.WithValue(cmd.Context(), "logFilePath", logFilePath)
+		cmd.SetContext(ctx)
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		s := pkg.NewServer(rootOpts.socket, serveOpts.kubeconfig, serveOpts.config)
+		logFilePath := cmd.Context().Value("logFilePath").(string)
+		s := pkg.NewServer(rootOpts.socket, serveOpts.kubeconfig, serveOpts.config, logFilePath)
 		return s.Run()
 	},
 }
@@ -65,6 +72,7 @@ func AddServeFlags(fs *pflag.FlagSet) {
 	}
 	fs.StringVar(&serveOpts.kubeconfig, "kubeconfig", defaultKubeconfig, "path to the kubeconfig file")
 	fs.StringVar(&serveOpts.logdir, "logdir", filepath.Join(os.TempDir(), "dpf"), "")
+	fs.BoolVar(&serveOpts.debug, "debug", true, "Enable debug logging")
 }
 
 func init() {

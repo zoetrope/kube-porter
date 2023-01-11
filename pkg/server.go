@@ -21,19 +21,21 @@ import (
 )
 
 type Server struct {
-	socketAddr string
-	kubeconfig string
-	config     string
-	logger     *zap.Logger
-	forwarders map[string]*Forwarder
+	socketAddr  string
+	kubeconfig  string
+	config      string
+	logFilePath string
+	logger      *zap.Logger
+	forwarders  map[string]*Forwarder
 }
 
-func NewServer(socketAddr string, kubeconfig string, config string) *Server {
+func NewServer(socketAddr string, kubeconfig string, config string, logFilePath string) *Server {
 	return &Server{
-		socketAddr: socketAddr,
-		kubeconfig: kubeconfig,
-		config:     config,
-		logger:     zap.L().Named("server"),
+		socketAddr:  socketAddr,
+		kubeconfig:  kubeconfig,
+		config:      config,
+		logFilePath: logFilePath,
+		logger:      zap.L().Named("server"),
 
 		forwarders: make(map[string]*Forwarder),
 	}
@@ -55,6 +57,7 @@ func (s Server) Run() error {
 
 	mux.HandleFunc("/", handle)
 	mux.HandleFunc("/ready", ready)
+	mux.HandleFunc("/logfile", s.getLogFilePath)
 	mux.HandleFunc("/stop", func(_ http.ResponseWriter, _ *http.Request) {
 		cancel()
 	})
@@ -184,4 +187,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 func ready(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "ok")
+}
+
+func (s Server) getLogFilePath(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, s.logFilePath)
 }
