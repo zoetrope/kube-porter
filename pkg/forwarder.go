@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -28,6 +29,7 @@ type Forwarder struct {
 	restClient rest.Interface
 	target     Target
 	logger     *zap.Logger
+	forwarding atomic.Bool
 }
 
 func NewForwarder(config *rest.Config, restClient rest.Interface, target Target) *Forwarder {
@@ -39,7 +41,7 @@ func NewForwarder(config *rest.Config, restClient rest.Interface, target Target)
 	}
 }
 
-func (f Forwarder) Run(ctx context.Context) error {
+func (f *Forwarder) Run(ctx context.Context) error {
 	timeout := 1 * time.Second
 	for {
 		err := f.forward(ctx)
@@ -59,7 +61,7 @@ func (f Forwarder) Run(ctx context.Context) error {
 	}
 }
 
-func (f Forwarder) getObject(ctx context.Context, clientset *kubernetes.Clientset) (runtime.Object, error) {
+func (f *Forwarder) getObject(ctx context.Context, clientset *kubernetes.Clientset) (runtime.Object, error) {
 
 	var obj runtime.Object
 	var err error
@@ -78,7 +80,8 @@ func (f Forwarder) getObject(ctx context.Context, clientset *kubernetes.Clientse
 	return obj, nil
 }
 
-func (f Forwarder) forward(ctx context.Context) error {
+func (f *Forwarder) forward(ctx context.Context) error {
+	defer f.forwarding.Store(false)
 	clientset, err := kubernetes.NewForConfig(f.config)
 	if err != nil {
 		return err
@@ -141,6 +144,7 @@ func (f Forwarder) forward(ctx context.Context) error {
 		stopChan <- struct{}{}
 	}()
 
+	f.forwarding.Store(true)
 	f.logger.Info("start forwarding")
 	err = fw.ForwardPorts()
 	if err != nil {
@@ -150,6 +154,11 @@ func (f Forwarder) forward(ctx context.Context) error {
 	f.logger.Info("lost connection")
 	return nil
 }
+
+func (f *Forwarder) isForwarding() bool {
+	return f.forwarding.Load()
+}
+
 func translatePorts(ports []string, svc *corev1.Service, pod *corev1.Pod) ([]string, error) {
 	var translated []string
 	for _, port := range ports {

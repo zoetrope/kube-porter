@@ -2,11 +2,11 @@ package pkg
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net"
 	"net/http"
-	"os"
 )
 
 type Client struct {
@@ -42,12 +42,31 @@ func (c *Client) Ready() error {
 	return ErrNotReady
 }
 
-func (c *Client) Get(path string) {
+func (c *Client) Get(path string) (string, error) {
 	res, err := c.client.Get("http://localhost" + path)
 	if err != nil {
-		return
+		return "", err
 	}
-	io.Copy(os.Stdout, res.Body)
+	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func (c *Client) GetJson(path string, data any) error {
+	res, err := c.client.Get("http://localhost" + path)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	err = json.NewDecoder(res.Body).Decode(data)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) Stop() error {

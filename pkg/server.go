@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -26,7 +27,9 @@ type Server struct {
 	config      string
 	logFilePath string
 	logger      *zap.Logger
-	forwarders  map[string]*Forwarder
+
+	mu         sync.RWMutex
+	forwarders map[string]*Forwarder
 }
 
 func NewServer(socketAddr string, kubeconfig string, config string, logFilePath string) *Server {
@@ -37,6 +40,7 @@ func NewServer(socketAddr string, kubeconfig string, config string, logFilePath 
 		logFilePath: logFilePath,
 		logger:      zap.L().Named("server"),
 
+		mu:         sync.RWMutex{},
 		forwarders: make(map[string]*Forwarder),
 	}
 }
@@ -57,6 +61,7 @@ func (s Server) Run() error {
 
 	mux.HandleFunc("/", handle)
 	mux.HandleFunc("/ready", ready)
+	mux.HandleFunc("/status", s.getForwarderList)
 	mux.HandleFunc("/logfile", s.getLogFilePath)
 	mux.HandleFunc("/stop", func(_ http.ResponseWriter, _ *http.Request) {
 		cancel()
@@ -144,6 +149,9 @@ func (s Server) reconcile(ctx context.Context) error {
 }
 
 func (s Server) forward(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	kcfg, err := clientcmd.BuildConfigFromFlags("", s.kubeconfig)
 	if err != nil {
 		return err
@@ -178,7 +186,14 @@ func (s Server) forward(ctx context.Context) error {
 	}
 	return nil
 }
-
+func (s Server) renderJSON(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	err := json.NewEncoder(w).Encode(data)
+	if err != nil {
+		s.logger.Error("failed to output JSON", zap.Error(err))
+	}
+}
 func handle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "hello")
@@ -187,6 +202,26 @@ func handle(w http.ResponseWriter, r *http.Request) {
 func ready(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "ok")
+}
+
+type ForwarderStatus struct {
+	Target     `json:,inline`
+	Forwarding bool `json:"forwarding"`
+}
+
+func (s Server) getForwarderList(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var forwarderList []ForwarderStatus
+	for _, forwarder := range s.forwarders {
+		forwarderList = append(forwarderList, ForwarderStatus{
+			Target:     forwarder.target,
+			Forwarding: forwarder.isForwarding(),
+		})
+	}
+
+	s.renderJSON(w, forwarderList, http.StatusOK)
 }
 
 func (s Server) getLogFilePath(w http.ResponseWriter, r *http.Request) {
