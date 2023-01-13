@@ -13,35 +13,28 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Server struct {
 	socketAddr  string
 	kubeconfig  string
-	config      string
+	manifest    string
 	logFilePath string
 	logger      *zap.Logger
 
-	mu         sync.RWMutex
-	forwarders map[string]*Forwarder
+	reconciler *manifestReconciler
 }
 
-func NewServer(socketAddr string, kubeconfig string, config string, logFilePath string) *Server {
+func NewServer(socketAddr string, kubeconfig string, manifest string, logFilePath string) *Server {
+	reconciler := newManifestReconciler(kubeconfig, manifest)
 	return &Server{
 		socketAddr:  socketAddr,
 		kubeconfig:  kubeconfig,
-		config:      config,
+		manifest:    manifest,
 		logFilePath: logFilePath,
 		logger:      zap.L().Named("server"),
-
-		mu:         sync.RWMutex{},
-		forwarders: make(map[string]*Forwarder),
+		reconciler:  reconciler,
 	}
 }
 
@@ -84,7 +77,7 @@ func (s Server) Run() error {
 		defer wg.Done()
 		defer cancel()
 
-		err = s.reconcile(ctx)
+		err = s.reconciler.run(ctx)
 		if err != nil {
 			s.logger.Error("failed to reconcile", zap.Error(err))
 		}
@@ -121,71 +114,6 @@ func (s Server) Run() error {
 	return nil
 }
 
-func (s Server) reconcile(ctx context.Context) error {
-	err := s.forward(ctx)
-	if err != nil {
-		return err
-	}
-
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	if err := watcher.Add(s.config); err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-watcher.Events:
-			err = s.forward(ctx)
-			if err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func (s Server) forward(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	kcfg, err := clientcmd.BuildConfigFromFlags("", s.kubeconfig)
-	if err != nil {
-		return err
-	}
-
-	kcfg.APIPath = "/api"
-	kcfg.GroupVersion = &corev1.SchemeGroupVersion
-	kcfg.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
-	restClient, err := rest.RESTClientFor(kcfg)
-	if err != nil {
-		return err
-	}
-
-	cfg, err := LoadConfig(s.config)
-	if err != nil {
-		return err
-	}
-	for _, target := range cfg.Targets {
-		if _, ok := s.forwarders[target.String()]; ok {
-			//TODO
-			continue
-		}
-		f := NewForwarder(kcfg, restClient, target)
-		go func() {
-			//TODO
-			err = f.Run(ctx)
-			if err != nil {
-				s.logger.Error("failed to run", zap.Error(err))
-			}
-		}()
-		s.forwarders[target.String()] = f
-	}
-	return nil
-}
 func (s Server) renderJSON(w http.ResponseWriter, data interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -210,18 +138,7 @@ type ForwarderStatus struct {
 }
 
 func (s Server) getForwarderList(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var forwarderList []ForwarderStatus
-	for _, forwarder := range s.forwarders {
-		forwarderList = append(forwarderList, ForwarderStatus{
-			Target:     forwarder.target,
-			Forwarding: forwarder.isForwarding(),
-		})
-	}
-
-	s.renderJSON(w, forwarderList, http.StatusOK)
+	s.renderJSON(w, s.reconciler.Status(), http.StatusOK)
 }
 
 func (s Server) getLogFilePath(w http.ResponseWriter, r *http.Request) {
