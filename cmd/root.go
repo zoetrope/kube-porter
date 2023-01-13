@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/spf13/cobra"
 	"github.com/zoetrope/declarative-port-forwarder/pkg"
@@ -47,6 +48,12 @@ func init() {
 	//TODO: move to PreRun
 	homedir, err := os.UserHomeDir()
 	cobra.CheckErr(err)
-	defaultSocketPath := filepath.Join(homedir, ".declarative-port-forwarder.sock")
+
+	var defaultSocketPath string
+	if runtime.GOOS == "linux" {
+		defaultSocketPath = "@declarative-port-forwarder.sock"
+	} else {
+		defaultSocketPath = filepath.Join(homedir, ".declarative-port-forwarder.sock")
+	}
 	fs.StringVar(&rootOpts.socket, "socket", defaultSocketPath, "")
 }
