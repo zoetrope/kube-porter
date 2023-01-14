@@ -9,5 +9,8 @@
   "postUpdateOptions": [
     "gomodTidy"
   ],
-  "automerge": true
+  "automerge": true,
+  "labels": [
+    "dependencies"
+  ]
 }
