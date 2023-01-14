@@ -16,7 +16,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
@@ -30,34 +32,73 @@ type Forwarder struct {
 	target     Target
 	logger     *zap.Logger
 	forwarding atomic.Bool
+	cancel     context.CancelFunc
+	exitCh     chan bool
 }
 
-func NewForwarder(config *rest.Config, restClient rest.Interface, target Target) *Forwarder {
+func NewForwarder(kubeconfig string, target Target) (*Forwarder, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	config.APIPath = "/api"
+	config.GroupVersion = &corev1.SchemeGroupVersion
+	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	restClient, err := rest.RESTClientFor(config)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Forwarder{
 		config:     config,
 		restClient: restClient,
 		target:     target,
 		logger:     zap.L().Named(target.Name),
+	}, nil
+}
+
+func (f *Forwarder) Run(ctx context.Context) {
+	go func() {
+		ctx, cancel := context.WithCancel(ctx)
+		f.cancel = cancel
+
+		timeout := 1 * time.Second
+		for {
+			err := f.forward(ctx)
+			if err != nil {
+				if timeout < 30*time.Second {
+					timeout *= 2
+				}
+				f.logger.Error("failed to forward", zap.Error(err))
+			} else {
+				timeout = 1 * time.Second
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(timeout):
+			}
+		}
+	}()
+}
+
+func (f *Forwarder) Stop() {
+	select {
+	case <-f.exitCh:
+		return
+	default:
+		close(f.exitCh)
+		f.cancel()
 	}
 }
 
-func (f *Forwarder) Run(ctx context.Context) error {
-	timeout := 1 * time.Second
-	for {
-		err := f.forward(ctx)
-		if err != nil {
-			if timeout < 30*time.Second {
-				timeout *= 2
-			}
-			f.logger.Error("failed to forward", zap.Error(err))
-		} else {
-			timeout = 1 * time.Second
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(timeout):
-		}
+func (f *Forwarder) isStopped() bool {
+	select {
+	case <-f.exitCh:
+		return true
+	default:
+		return false
 	}
 }
 

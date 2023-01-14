@@ -15,7 +15,7 @@ import (
 )
 
 var serveOpts struct {
-	config     string
+	manifest   string
 	kubeconfig string
 	logdir     string
 	debug      bool
@@ -59,13 +59,13 @@ to quickly create a Cobra application.`,
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logFilePath := cmd.Context().Value("logFilePath").(string)
-		s := pkg.NewServer(rootOpts.socket, serveOpts.kubeconfig, serveOpts.config, logFilePath)
+		s := pkg.NewServer(rootOpts.socket, serveOpts.kubeconfig, serveOpts.manifest, logFilePath)
 		return s.Run()
 	},
 }
 
 func AddServeFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&serveOpts.config, "config", "", "path to the config file")
+	fs.StringVar(&serveOpts.manifest, "manifest", "", "path to the manifest file")
 	var defaultKubeconfig = ""
 	if home := homedir.HomeDir(); home != "" {
 		defaultKubeconfig = filepath.Join(home, ".kube", "config")

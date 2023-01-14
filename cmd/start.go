@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -30,10 +29,6 @@ to quickly create a Cobra application.`,
 		if err == nil {
 			return errors.New("server is already running")
 		}
-		var errno syscall.Errno
-		if !errors.As(err, &errno) {
-			return err
-		}
 
 		exe, err := os.Executable()
 		if err != nil {
@@ -50,8 +45,8 @@ to quickly create a Cobra application.`,
 		if len(serveOpts.kubeconfig) != 0 {
 			opts = append(opts, "--kubeconfig", serveOpts.kubeconfig)
 		}
-		if len(serveOpts.config) != 0 {
-			opts = append(opts, "--config", serveOpts.config)
+		if len(serveOpts.manifest) != 0 {
+			opts = append(opts, "--manifest", serveOpts.manifest)
 		}
 		if len(serveOpts.logdir) != 0 {
 			opts = append(opts, "--logdir", serveOpts.logdir)

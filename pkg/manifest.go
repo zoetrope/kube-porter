@@ -1,7 +1,9 @@
 package pkg
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 )
@@ -14,20 +16,19 @@ type Target struct {
 }
 
 func (t Target) String() string {
-	//TODO:
-	return t.Namespace + "/" + t.Name
+	return fmt.Sprintf("%s:%s/%s(%s)", t.ObjectType, t.Namespace, t.Name, strings.Join(t.Ports, ","))
 }
 
-type Config struct {
+type Manifest struct {
 	Targets []Target `json:"targets"`
 }
 
-func LoadConfig(filepath string) (*Config, error) {
+func LoadManifest(filepath string) (*Manifest, error) {
 	b, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
-	cfg := &Config{}
+	cfg := &Manifest{}
 	err = yaml.Unmarshal(b, cfg)
 	if err != nil {
 		return nil, err
