@@ -42,6 +42,10 @@ to quickly create a Cobra application.`,
 			cfg = zap.NewProductionConfig()
 		}
 		pid := os.Getpid()
+		err := os.MkdirAll(serveOpts.logdir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("unable to create logdir %s: %w", serveOpts.logdir, err)
+		}
 		logFilePath := filepath.Join(serveOpts.logdir, fmt.Sprintf("server-%d.log", pid))
 		cfg.OutputPaths = []string{
 			logFilePath,
