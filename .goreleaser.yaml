@@ -29,6 +29,18 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
+  groups:
+    - title: 'Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 10
+    - title: 'Chores'
+      regexp: "^.*chore[(\\w)]*:+.*$"
+      order: 100
+    - title: 'Others'
+      order: 999
   filters:
     exclude:
       - '^docs:'

@@ -3,6 +3,7 @@
   "extends": [
     "config:base",
     "github>aquaproj/aqua-renovate-config#1.5.1",
+    ":semanticCommitTypeAll(chore)",
     ":timezone(Asia/Tokyo)"
   ],
   "postUpdateOptions": [
