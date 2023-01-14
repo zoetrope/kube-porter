@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -100,5 +101,8 @@ func (r manifestReconciler) Status() []ForwarderStatus {
 			Forwarding: forwarder.isForwarding(),
 		})
 	}
+	sort.Slice(forwarderList, func(i, j int) bool {
+		return forwarderList[i].String() < forwarderList[j].String()
+	})
 	return forwarderList
 }
