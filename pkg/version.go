@@ -1,5 +1,5 @@
 package pkg
 
-const (
+var (
 	Version = "unset"
 )
