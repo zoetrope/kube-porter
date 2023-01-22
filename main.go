@@ -1,6 +1,6 @@
 package main
 
-import "github.com/zoetrope/declarative-port-forwarder/cmd"
+import "github.com/zoetrope/kube-porter/cmd"
 
 func main() {
 	cmd.Execute()

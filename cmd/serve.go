@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/zoetrope/declarative-port-forwarder/pkg"
+	"github.com/zoetrope/kube-porter/pkg"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/util/homedir"
@@ -75,7 +75,7 @@ func AddServeFlags(fs *pflag.FlagSet) {
 		defaultKubeconfig = filepath.Join(home, ".kube", "config")
 	}
 	fs.StringVar(&serveOpts.kubeconfig, "kubeconfig", defaultKubeconfig, "path to the kubeconfig file")
-	fs.StringVar(&serveOpts.logdir, "logdir", filepath.Join(os.TempDir(), "dpf"), "")
+	fs.StringVar(&serveOpts.logdir, "logdir", filepath.Join(os.TempDir(), "kube-porter"), "")
 	fs.BoolVar(&serveOpts.debug, "debug", true, "Enable debug logging")
 }
 
