@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/zoetrope/declarative-port-forwarder/pkg"
+	"github.com/zoetrope/kube-porter/pkg"
 )
 
 // stopCmd represents the stop command

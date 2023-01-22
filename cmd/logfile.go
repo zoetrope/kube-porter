@@ -5,25 +5,25 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/zoetrope/declarative-port-forwarder/pkg"
+	"github.com/zoetrope/kube-porter/pkg"
 )
 
 // logfileCmd represents the logfile command
 var logfileCmd = &cobra.Command{
 	Use:   "logfile",
-	Short: "Print the name of log file for declarative-port-forwarder",
-	Long: `Print the name of log file for declarative-port-forwarder
+	Short: "Print the name of log file for kube-porter",
+	Long: `Print the name of log file for kube-porter
 You can view log by passing the result of this command as follows:
 
-$ cat $(declarative-port-forwarder logfile)
+$ cat $(kube-porter logfile)
 
-$ tail -f $(declarative-port-forwarder logfile)
+$ tail -f $(kube-porter logfile)
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := pkg.NewClient(rootOpts.socket)
 		err := c.Ready()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "declarative-port-forwarder is not yet running")
+			fmt.Fprintln(os.Stderr, "kube-porter is not yet running")
 			return err
 		}
 		logfile, err := c.Get("/logfile")

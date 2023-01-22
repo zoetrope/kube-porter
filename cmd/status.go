@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"github.com/zoetrope/declarative-port-forwarder/pkg"
+	"github.com/zoetrope/kube-porter/pkg"
 )
 
 var statusOpts struct {
@@ -24,7 +24,7 @@ var statusCmd = &cobra.Command{
 		c := pkg.NewClient(rootOpts.socket)
 		err := c.Ready()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "declarative-port-forwarder is not yet running")
+			fmt.Fprintln(os.Stderr, "kube-porter is not yet running")
 			return err
 		}
 

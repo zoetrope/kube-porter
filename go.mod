@@ -1,4 +1,4 @@
-module github.com/zoetrope/declarative-port-forwarder
+module github.com/zoetrope/kube-porter
 
 go 1.19
 

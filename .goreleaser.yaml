@@ -1,4 +1,4 @@
-project_name: declarative-port-forwarder
+project_name: kube-porter
 before:
   hooks:
     - go mod tidy
@@ -10,7 +10,7 @@ builds:
       - windows
       - darwin
     ldflags:
-      - -X github.com/zoetrope/declarative-port-forwarder/cmd.Version={{.Version}}
+      - -X github.com/zoetrope/kube-porter/cmd.Version={{.Version}}
 archives:
   - format: tar.gz
     name_template: >-

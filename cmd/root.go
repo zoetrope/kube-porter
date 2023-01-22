@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
-	"github.com/zoetrope/declarative-port-forwarder/pkg"
+	"github.com/zoetrope/kube-porter/pkg"
 )
 
 var rootOpts struct {
@@ -15,7 +15,7 @@ var rootOpts struct {
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "declarative-port-forwarder",
+	Use:   "kube-porter",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -51,9 +51,9 @@ func init() {
 
 	var defaultSocketPath string
 	if runtime.GOOS == "linux" {
-		defaultSocketPath = "@declarative-port-forwarder.sock"
+		defaultSocketPath = "@kube-porter.sock"
 	} else {
-		defaultSocketPath = filepath.Join(homedir, ".declarative-port-forwarder.sock")
+		defaultSocketPath = filepath.Join(homedir, ".kube-porter.sock")
 	}
 	fs.StringVar(&rootOpts.socket, "socket", defaultSocketPath, "")
 }
