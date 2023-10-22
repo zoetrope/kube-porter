@@ -3,7 +3,7 @@ module github.com/zoetrope/kube-porter
 go 1.19
 
 require (
-	github.com/fsnotify/fsnotify v1.6.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	go.uber.org/zap v1.26.0
